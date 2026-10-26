@@ -44,6 +44,12 @@ export default function App() {
 
   const recognitionRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const conversationIdRef = useRef(null);
+  const transcriptRef = useRef('');
+
+  useEffect(() => {
+    conversationIdRef.current = conversationId;
+  }, [conversationId]);
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -56,22 +62,28 @@ export default function App() {
 
       recognition.onstart = () => {
         setIsListening(true);
+        transcriptRef.current = '';
+        setInterimText('');
       };
 
       recognition.onresult = (event) => {
         let interim = '';
         let final = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const item = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            final += event.results[i][0].transcript;
+            final += item;
           } else {
-            interim += event.results[i][0].transcript;
+            interim += item;
           }
         }
-        setInterimText(interim);
+        
         if (final) {
-          handleUserUtterance(final);
+          transcriptRef.current = final;
           setInterimText('');
+        } else {
+          transcriptRef.current = interim;
+          setInterimText(interim);
         }
       };
 
@@ -83,6 +95,12 @@ export default function App() {
 
       recognition.onend = () => {
         setIsListening(false);
+        setInterimText('');
+        const textToSend = transcriptRef.current?.trim();
+        if (textToSend) {
+          handleUserUtterance(textToSend);
+          transcriptRef.current = '';
+        }
       };
 
       recognitionRef.current = recognition;
@@ -135,7 +153,8 @@ export default function App() {
   };
 
   const handleUserUtterance = async (text) => {
-    if (!text.trim() || !conversationId) return;
+    const activeId = conversationIdRef.current || conversationId;
+    if (!text || !text.trim() || !activeId) return;
 
     // Add user message
     const userMsg = {
@@ -152,7 +171,7 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          conversation_id: conversationId,
+          conversation_id: activeId,
           message: text.trim()
         })
       });
