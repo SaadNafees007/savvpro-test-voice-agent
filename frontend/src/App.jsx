@@ -46,6 +46,14 @@ export default function App() {
   const messagesEndRef = useRef(null);
   const conversationIdRef = useRef(null);
   const transcriptRef = useRef('');
+  const ttsEnabledRef = useRef(true);
+
+  useEffect(() => {
+    ttsEnabledRef.current = ttsEnabled;
+    if (!ttsEnabled && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  }, [ttsEnabled]);
 
   useEffect(() => {
     conversationIdRef.current = conversationId;
@@ -117,7 +125,7 @@ export default function App() {
   }, [messages, interimText]);
 
   const speakMessage = (text) => {
-    if (!ttsEnabled || !window.speechSynthesis) return;
+    if (!ttsEnabledRef.current || !window.speechSynthesis) return;
     window.speechSynthesis.cancel(); // Stop prior speech
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.0;
